@@ -1,6 +1,6 @@
 {
   "name": "idea-check",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Continuously verify that plain-language product ideas remain true.",
   "author": {
     "name": "Gavin Dinubilo",
@@ -14,14 +14,14 @@
   "interface": {
     "displayName": "Idea Check",
     "shortDescription": "Verify that product ideas remain true.",
-    "longDescription": "Idea Check turns plain-language product ideas into fresh, evidence-backed verification runs in any coding-agent harness.",
+    "longDescription": "Idea Check lets coding agents implement human-owned product ideas completely and verify them with fresh evidence in any harness.",
     "developerName": "Gavin Dinubilo",
     "category": "Developer Tools",
     "capabilities": ["Read", "Execute"],
     "websiteURL": "https://github.com/dinubs/idea-check",
     "defaultPrompt": [
       "Verify the ideas in this project.",
-      "Check the ideas affected by my latest changes.",
+      "Implement this idea until it is fully supported.",
       "Try to falsify our most important product ideas."
     ]
   }

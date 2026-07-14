@@ -4,6 +4,11 @@ Idea Check continuously verifies that plain-language product ideas remain true.
 
 Humans own the ideas. Coding agents own the implementation. An independent verification run attempts to falsify each idea using the strongest evidence available in the current environment.
 
+The plugin contains two portable skills:
+
+- `implement-idea`: take one idea and keep implementing until fresh evidence supports it.
+- `verify-ideas`: independently attempt to falsify one or more ideas.
+
 Idea files are ordinary Markdown, not executable specifications:
 
 ```md
@@ -48,7 +53,7 @@ Prepare a run:
 bin/idea-check prepare --root /path/to/project
 ```
 
-Verification has no predefined profiles. To explain why a run is happening, pass any context that is useful:
+Verification context is open-ended. To explain why a run is happening, pass any context that is useful:
 
 ```sh
 bin/idea-check prepare \
@@ -66,6 +71,16 @@ bin/idea-check prepare \
 ```
 
 Context belongs to the verification run, never to the idea file.
+
+## Implement an idea
+
+Invoke `implement-idea` with an idea ID or path:
+
+```text
+Use $implement-idea to implement completed-work-is-durable.
+```
+
+The agent reads the human-owned idea, derives a private completion checklist, implements every necessary product layer, and finishes with a fresh Idea Check verification. It must loop on locally resolvable gaps rather than stopping at “tests pass” or “mostly complete.” The idea file is not rewritten to fit the implementation.
 
 Give `.idea-check/current/prompt.md` to the harness, constrain its final output with `.idea-check/current/report-schema.json`, and save the final JSON as `.idea-check/current/report.json`.
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Idea"
+  short_description: "Implement an idea until evidence supports it"
+  default_prompt: "Use $implement-idea to fully implement a selected product idea."
