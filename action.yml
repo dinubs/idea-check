@@ -10,10 +10,10 @@ inputs:
   openai-api-key:
     description: OpenAI API key passed directly to the official Codex action.
     required: true
-  profile:
-    description: Verification profile: ci, release, or weekly.
+  context:
+    description: Optional free-form context explaining why this verification is running.
     required: false
-    default: ci
+    default: Continuous integration verification
   ideas:
     description: Repository-relative directory containing idea Markdown files.
     required: false
@@ -37,11 +37,11 @@ runs:
     - name: Prepare Idea Check request
       shell: bash
       env:
-        IDEA_CHECK_PROFILE: ${{ inputs.profile }}
+        IDEA_CHECK_CONTEXT: ${{ inputs.context }}
         IDEA_CHECK_IDEAS: ${{ inputs.ideas }}
         IDEA_CHECK_CHANGED_SINCE: ${{ inputs.changed-since }}
       run: |
-        args=(--root "$GITHUB_WORKSPACE" prepare --profile "$IDEA_CHECK_PROFILE" --ideas "$IDEA_CHECK_IDEAS")
+        args=(--root "$GITHUB_WORKSPACE" prepare --context "$IDEA_CHECK_CONTEXT" --ideas "$IDEA_CHECK_IDEAS")
         if [[ -n "$IDEA_CHECK_CHANGED_SINCE" ]]; then
           args+=(--changed-since "$IDEA_CHECK_CHANGED_SINCE")
         fi

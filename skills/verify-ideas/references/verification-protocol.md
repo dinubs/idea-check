@@ -24,7 +24,7 @@ Use existing tests when they probe the idea. A green suite alone is not sufficie
 - `contradicted`: Direct current evidence demonstrates at least one material part is false.
 - `inconclusive`: The investigation ran, but evidence is incomplete, ambiguous, stale, or too indirect.
 - `blocked`: A missing service, credential, tool, environment, or other external condition prevented meaningful investigation.
-- `not_applicable`: The request explicitly selected an idea that cannot apply to the stated profile or artifact. Explain why; use sparingly.
+- `not_applicable`: The request explicitly selected an idea that cannot apply to the stated context or artifact. Explain why; use sparingly.
 
 ## Integrity rules
 
@@ -35,8 +35,8 @@ Use existing tests when they probe the idea. A green suite alone is not sufficie
 - Do not omit selected ideas. The deterministic validator rejects omissions and duplicates.
 - Keep secrets and sensitive output out of evidence.
 
-## Profiles
+## Run context
 
-- `ci`: Prefer bounded checks suitable for a pull request or commit. Inspect the diff when provided, but still assess every selected idea.
-- `release`: Check the built or deployable artifact and important integration boundaries. Treat local-only evidence as a gap when the idea describes deployed behavior.
-- `weekly`: Revisit slow, operational, external, visual, and product-level claims. Compare with previous evidence when available.
+Treat the request's optional context as open-ended guidance about why verification is happening now. It may describe a change, incident, environment, artifact, risk, or review cadence. Do not reinterpret it as a fixed mode, and do not persist it back into idea files.
+
+When no context is supplied, perform the strongest general verification available. When specific ideas are selected, investigate only those ideas while preserving their complete meaning.

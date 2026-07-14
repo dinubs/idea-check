@@ -14,8 +14,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = 1
-PROFILES = ("ci", "release", "weekly")
+SCHEMA_VERSION = 2
 RESULTS = ("supported", "contradicted", "inconclusive", "blocked", "not_applicable")
 
 
@@ -28,7 +27,6 @@ class Idea:
     id: str
     path: str
     title: str
-    profiles: list[str]
     blocking: bool
     content: str
 
@@ -92,16 +90,6 @@ def _frontmatter(text: str) -> tuple[dict[str, str], str]:
     return metadata, text[end + 5 :]
 
 
-def _list_value(value: str | None, default: list[str]) -> list[str]:
-    if value is None:
-        return default
-    stripped = value.strip()
-    if stripped.startswith("[") and stripped.endswith("]"):
-        stripped = stripped[1:-1]
-    values = [part.strip().strip("'\"") for part in stripped.split(",")]
-    return [value for value in values if value]
-
-
 def _bool_value(value: str | None, default: bool) -> bool:
     if value is None:
         return default
@@ -123,12 +111,12 @@ def read_idea(root: Path, file_path: Path, ideas_dir: Path) -> Idea:
     relative = file_path.relative_to(root).as_posix()
     fallback_id = file_path.relative_to(ideas_dir).with_suffix("").as_posix().replace("/", ".")
     idea_id = metadata.get("id", fallback_id)
+    if "profiles" in metadata or "profile" in metadata:
+        raise IdeaCheckError(
+            f"{relative}: profiles do not belong in idea files; select ideas or describe the run context when preparing verification"
+        )
     if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", idea_id):
         raise IdeaCheckError(f"{relative}: id must use lowercase letters, digits, dots, dashes, or underscores")
-    profiles = _list_value(metadata.get("profiles"), list(PROFILES))
-    unknown_profiles = sorted(set(profiles) - set(PROFILES))
-    if unknown_profiles:
-        raise IdeaCheckError(f"{relative}: unknown profiles: {', '.join(unknown_profiles)}")
     title_match = re.search(r"^#\s+(.+?)\s*$", body, re.MULTILINE)
     title = title_match.group(1) if title_match else idea_id
     if len(body.strip()) < 20:
@@ -137,13 +125,12 @@ def read_idea(root: Path, file_path: Path, ideas_dir: Path) -> Idea:
         id=idea_id,
         path=relative,
         title=title,
-        profiles=profiles,
         blocking=_bool_value(metadata.get("blocking"), True),
         content=body.strip(),
     )
 
 
-def discover(root: Path, ideas_path: str, profile: str | None = None) -> list[Idea]:
+def discover(root: Path, ideas_path: str, selected_ids: set[str] | None = None) -> list[Idea]:
     root = root.resolve()
     ideas_dir = (root / ideas_path).resolve()
     if not ideas_dir.is_dir():
@@ -157,11 +144,15 @@ def discover(root: Path, ideas_path: str, profile: str | None = None) -> list[Id
         if idea.id in ids:
             raise IdeaCheckError(f"Duplicate idea id: {idea.id}")
         ids.add(idea.id)
-        if profile is None or profile in idea.profiles:
-            ideas.append(idea)
+        ideas.append(idea)
+    if selected_ids:
+        discovered_ids = {idea.id for idea in ideas}
+        missing = sorted(selected_ids - discovered_ids)
+        if missing:
+            raise IdeaCheckError(f"Unknown selected idea ids: {', '.join(missing)}")
+        ideas = [idea for idea in ideas if idea.id in selected_ids]
     if not ideas:
-        suffix = f" for profile {profile}" if profile else ""
-        raise IdeaCheckError(f"No idea files found{suffix} under {ideas_path}")
+        raise IdeaCheckError(f"No idea files found under {ideas_path}")
     return ideas
 
 
@@ -177,7 +168,8 @@ def prepare(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     if not root.is_dir():
         raise IdeaCheckError(f"Project root does not exist: {root}")
-    ideas = discover(root, args.ideas, args.profile)
+    selected_ids = set(args.idea or [])
+    ideas = discover(root, args.ideas, selected_ids)
     output = (root / args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     (output / "artifacts").mkdir(exist_ok=True)
@@ -185,7 +177,7 @@ def prepare(args: argparse.Namespace) -> int:
 
     request = {
         "schema_version": SCHEMA_VERSION,
-        "profile": args.profile,
+        "context": args.context.strip(),
         "revision": revision(root),
         "ideas_path": args.ideas,
         "changed_since": args.changed_since,
@@ -209,19 +201,19 @@ The human-owned request is at `{relative_output}/request.json`. Read it complete
 ## Run-specific constraints
 
 - Work from `{root}`.
-- Use the `{args.profile}` profile.
+- Use this run context as guidance, not as part of any idea: `{args.context.strip() or 'No additional context was supplied.'}`
 - Do not modify tracked project files.
 - Put disposable probes only under `{relative_output}/work/`.
 - Put screenshots, logs, and other retained evidence only under `{relative_output}/artifacts/`.
 - Investigate every idea in the request, even when recent changes appear unrelated.
 - Your final response must be JSON only and must conform to `{relative_output}/report-schema.json`.
-- Use the exact request profile, revision, idea IDs, and idea paths.
+- Use the exact request context, revision, idea IDs, and idea paths.
 - Do not wrap the JSON in Markdown fences.
 
-The deterministic validator will reject omitted or duplicate ideas, profile or revision mismatches, malformed evidence, and tracked-file modifications. It will compute the gate from the request's human-owned `blocking` fields.
+The deterministic validator will reject omitted or duplicate ideas, context or revision mismatches, malformed evidence, and tracked-file modifications. It will compute the gate from the request's human-owned `blocking` fields.
 """
     (output / "prompt.md").write_text(prompt, encoding="utf-8")
-    print(f"Prepared {len(ideas)} idea(s) for {args.profile} verification in {output}")
+    print(f"Prepared {len(ideas)} idea(s) for verification in {output}")
     return 0
 
 
@@ -248,11 +240,11 @@ def _validate_evidence(evidence: Any, idea_id: str) -> None:
 
 def validate_report(request: dict[str, Any], report: dict[str, Any], root: Path) -> tuple[int, str]:
     _expect(report.get("schema_version") == SCHEMA_VERSION, "Unsupported or missing report schema_version")
-    _expect(report.get("profile") == request["profile"], "Report profile does not match request")
+    _expect(report.get("context") == request["context"], "Report context does not match request")
     _expect(report.get("revision") == request["revision"], "Report revision does not match request")
     _expect(isinstance(report.get("summary"), str) and report["summary"], "Report summary must be a non-empty string")
     _expect(isinstance(report.get("ideas"), list), "Report ideas must be an array")
-    _expect(set(report) == {"schema_version", "profile", "revision", "summary", "ideas"}, "Report has missing or unknown top-level fields")
+    _expect(set(report) == {"schema_version", "context", "revision", "summary", "ideas"}, "Report has missing or unknown top-level fields")
 
     requested = {idea["id"]: idea for idea in request["ideas"]}
     reported: dict[str, dict[str, Any]] = {}
@@ -297,7 +289,7 @@ def render_summary(request: dict[str, Any], report: dict[str, Any], gate: str) -
     lines = [
         "# Idea Check report",
         "",
-        f"**Profile:** {report['profile']}",
+        f"**Context:** {report['context'] or 'General verification'}",
         f"**Revision:** {report['revision']}",
         f"**Gate:** {gate}",
         "",
@@ -350,9 +342,8 @@ def validate(args: argparse.Namespace) -> int:
 
 def list_ideas(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
-    for idea in discover(root, args.ideas, args.profile):
-        profiles = ",".join(idea.profiles)
-        print(f"{idea.id}\t{profiles}\tblocking={str(idea.blocking).lower()}\t{idea.path}")
+    for idea in discover(root, args.ideas):
+        print(f"{idea.id}\tblocking={str(idea.blocking).lower()}\t{idea.path}")
     return 0
 
 
@@ -366,7 +357,7 @@ def new_idea(args: argparse.Namespace) -> int:
     ideas_dir.mkdir(parents=True, exist_ok=True)
     title = args.title or args.id.replace("-", " ").strip().title()
     path.write_text(
-        f"---\nid: {idea_id}\nprofiles: [ci, release, weekly]\nblocking: true\n---\n\n"
+        f"---\nid: {idea_id}\nblocking: true\n---\n\n"
         f"# {title}\n\nState the idea in ordinary language.\n\n"
         "Explain why it matters and the conditions under which it must remain true.\n\n"
         "The idea is false if ...\n",
@@ -382,9 +373,10 @@ def parser() -> argparse.ArgumentParser:
     subcommands = result.add_subparsers(dest="command", required=True)
 
     prepare_parser = subcommands.add_parser("prepare", help="Prepare an agent verification request")
-    prepare_parser.add_argument("--profile", choices=PROFILES, default="ci")
     prepare_parser.add_argument("--ideas", default="ideas")
     prepare_parser.add_argument("--output", default=".idea-check/current")
+    prepare_parser.add_argument("--context", default="", help="Optional free-form context for this verification run")
+    prepare_parser.add_argument("--idea", action="append", help="Verify only this idea id; repeat to select multiple")
     prepare_parser.add_argument("--changed-since")
     prepare_parser.set_defaults(handler=prepare)
 
@@ -395,7 +387,6 @@ def parser() -> argparse.ArgumentParser:
 
     list_parser = subcommands.add_parser("list", help="List discovered ideas")
     list_parser.add_argument("--ideas", default="ideas")
-    list_parser.add_argument("--profile", choices=PROFILES)
     list_parser.set_defaults(handler=list_ideas)
 
     new_parser = subcommands.add_parser("new", help="Create a plain-language idea file")

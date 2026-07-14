@@ -30,12 +30,13 @@ class IdeaCheckTest(unittest.TestCase):
         text = f"---\n{metadata}\n---\n\n{body}" if metadata else body
         (self.root / "ideas" / name).write_text(text, encoding="utf-8")
 
-    def prepare(self, profile="ci"):
+    def prepare(self, context=""):
         args = Namespace(
             root=str(self.root),
             ideas="ideas",
             output=".idea-check/current",
-            profile=profile,
+            context=context,
+            idea=None,
             changed_since=None,
         )
         self.assertEqual(0, idea_check.prepare(args))
@@ -44,8 +45,8 @@ class IdeaCheckTest(unittest.TestCase):
     def report(self, request, result="supported", gaps=None):
         idea = request["ideas"][0]
         return {
-            "schema_version": 1,
-            "profile": request["profile"],
+            "schema_version": 2,
+            "context": request["context"],
             "revision": request["revision"],
             "summary": "Verification completed.",
             "ideas": [
@@ -70,26 +71,39 @@ class IdeaCheckTest(unittest.TestCase):
 
     def test_discovers_plain_markdown_without_behavioral_dsl(self):
         self.write_idea()
-        ideas = idea_check.discover(self.root, "ideas", "ci")
+        ideas = idea_check.discover(self.root, "ideas")
         self.assertEqual("durable", ideas[0].id)
         self.assertTrue(ideas[0].blocking)
-        self.assertEqual(list(idea_check.PROFILES), ideas[0].profiles)
 
-    def test_operational_metadata_filters_profiles(self):
-        self.write_idea(metadata="id: save-promise\nprofiles: [release, weekly]\nblocking: false")
-        with self.assertRaises(idea_check.IdeaCheckError):
-            idea_check.discover(self.root, "ideas", "ci")
-        ideas = idea_check.discover(self.root, "ideas", "release")
+    def test_operational_metadata_has_no_profiles(self):
+        self.write_idea(metadata="id: save-promise\nblocking: false")
+        ideas = idea_check.discover(self.root, "ideas")
         self.assertEqual("save-promise", ideas[0].id)
         self.assertFalse(ideas[0].blocking)
+
+    def test_profile_metadata_is_rejected(self):
+        self.write_idea(metadata="id: save-promise\nprofiles: [anything]\nblocking: false")
+        with self.assertRaisesRegex(idea_check.IdeaCheckError, "profiles do not belong"):
+            idea_check.discover(self.root, "ideas")
+
+    def test_selects_ideas_explicitly(self):
+        self.write_idea("durable.md")
+        self.write_idea("charges.md", body="# Charges happen once\n\nAn order can never produce two captured charges.")
+        ideas = idea_check.discover(self.root, "ideas", {"charges"})
+        self.assertEqual(["charges"], [idea.id for idea in ideas])
 
     def test_prepare_creates_request_prompt_and_schema(self):
         self.write_idea()
         request = self.prepare()
-        self.assertEqual("ci", request["profile"])
+        self.assertEqual("", request["context"])
         self.assertEqual(["durable"], [idea["id"] for idea in request["ideas"]])
         self.assertTrue((self.root / ".idea-check/current/prompt.md").is_file())
         self.assertTrue((self.root / ".idea-check/current/report-schema.json").is_file())
+
+    def test_prepare_preserves_free_form_context(self):
+        self.write_idea()
+        request = self.prepare("After the outage, challenge every storage assumption")
+        self.assertEqual("After the outage, challenge every storage assumption", request["context"])
 
     def test_supported_blocking_idea_passes(self):
         self.write_idea()

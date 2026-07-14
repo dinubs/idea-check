@@ -1,6 +1,5 @@
 ---
 id: completed-work-is-durable
-profiles: [ci, release, weekly]
 blocking: true
 ---
 

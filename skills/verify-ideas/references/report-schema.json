@@ -3,10 +3,10 @@
   "title": "Idea Check verification report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "profile", "revision", "summary", "ideas"],
+  "required": ["schema_version", "context", "revision", "summary", "ideas"],
   "properties": {
-    "schema_version": { "const": 1 },
-    "profile": { "enum": ["ci", "release", "weekly"] },
+    "schema_version": { "const": 2 },
+    "context": { "type": "string" },
     "revision": { "type": "string" },
     "summary": { "type": "string", "minLength": 1 },
     "ideas": {

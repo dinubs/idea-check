@@ -16,8 +16,8 @@ Example:
 
 ```json
 {
-  "schema_version": 1,
-  "profile": "ci",
+  "schema_version": 2,
+  "context": "Check the storefront routing changes before shipping",
   "revision": "4e31a67",
   "summary": "One idea is supported and one is inconclusive.",
   "ideas": [

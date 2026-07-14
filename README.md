@@ -9,7 +9,6 @@ Idea files are ordinary Markdown, not executable specifications:
 ```md
 ---
 id: completed-work-is-durable
-profiles: [ci, release, weekly]
 blocking: true
 ---
 
@@ -21,7 +20,7 @@ deployments, and temporary network failure.
 The idea is false if “Saved” is shown but an older version later appears.
 ```
 
-Only the frontmatter is operational. It identifies the idea, chooses verification profiles, and controls gating. The claim stays natural language.
+Only the frontmatter is operational. It gives the idea a stable identity and controls gating. The claim stays natural language.
 
 ## How it works
 
@@ -37,7 +36,7 @@ structured evidence report
 idea-check validate
 ```
 
-The agent does not decide the CI exit status. The deterministic validator rejects omitted ideas, duplicate results, profile mismatches, and unsupported report shapes before applying the human-owned `blocking` setting.
+The agent does not decide the exit status. The deterministic validator rejects omitted ideas, duplicate results, context mismatches, and unsupported report shapes before applying the human-owned `blocking` setting.
 
 ## Use with any agent
 
@@ -46,8 +45,27 @@ Clone the repository and install `skills/verify-ideas/` using your harness's Age
 Prepare a run:
 
 ```sh
-bin/idea-check prepare --root /path/to/project --profile ci
+bin/idea-check prepare --root /path/to/project
 ```
+
+Verification has no predefined profiles. To explain why a run is happening, pass any context that is useful:
+
+```sh
+bin/idea-check prepare \
+  --root /path/to/project \
+  --context "Check the billing rewrite before shipping"
+```
+
+Every idea is selected by default. To check only specific ideas, repeat `--idea`:
+
+```sh
+bin/idea-check prepare \
+  --root /path/to/project \
+  --idea completed-work-is-durable \
+  --idea charges-happen-once
+```
+
+Context belongs to the verification run, never to the idea file.
 
 Give `.idea-check/current/prompt.md` to the harness, constrain its final output with `.idea-check/current/report-schema.json`, and save the final JSON as `.idea-check/current/report.json`.
 
@@ -75,7 +93,7 @@ Other harnesses use the same prepared prompt and report contract. They do not ne
 - uses: dinubs/idea-check@v1
   with:
     openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-    profile: ci
+    context: Check the pull request before merging
 ```
 
 The action uses `openai/codex-action` as one harness wrapper, validates the structured report, and exposes the evidence directory for artifact upload. API credentials are passed directly to the official Codex action rather than exported to repository-controlled build steps.

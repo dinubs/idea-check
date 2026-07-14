@@ -10,7 +10,7 @@ Treat the idea files as human-owned claims and the implementation as evidence. A
 ## Run a verification
 
 1. Locate the Idea Check runner. Prefer `bin/idea-check` in the project, then `idea-check` on `PATH`, then this skill's `scripts/idea_check.py`.
-2. Run `prepare --profile <ci|release|weekly>` to create a request, prompt, and report schema under `.idea-check/current/`.
+2. Run `prepare` to create a request, prompt, and report schema under `.idea-check/current/`. Pass an optional free-form `--context` or repeat `--idea <id>` to narrow the run when the user asks.
 3. Read `references/verification-protocol.md` and the generated request before investigating.
 4. Inspect the available code, tests, runtime, browser, deployment artifact, or operational evidence as the environment permits.
 5. Try realistic failure paths and boundary conditions. Use existing tests as evidence, or create disposable probes only under `.idea-check/current/work/`.
