@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Ideas"
+  short_description: "Verify product ideas against current evidence"
+  default_prompt: "Use $verify-ideas to verify the project ideas for the current CI profile."

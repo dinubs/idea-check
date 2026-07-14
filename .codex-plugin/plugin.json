@@ -1,0 +1,28 @@
+{
+  "name": "idea-check",
+  "version": "0.1.0",
+  "description": "Continuously verify that plain-language product ideas remain true.",
+  "author": {
+    "name": "Gavin Dinubilo",
+    "url": "https://github.com/dinubs"
+  },
+  "homepage": "https://github.com/dinubs/idea-check",
+  "repository": "https://github.com/dinubs/idea-check",
+  "license": "MIT",
+  "keywords": ["agent-skills", "ci", "verification", "product-ideas"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Idea Check",
+    "shortDescription": "Verify that product ideas remain true.",
+    "longDescription": "Idea Check turns plain-language product ideas into fresh, evidence-backed verification runs in CI, releases, and scheduled audits.",
+    "developerName": "Gavin Dinubilo",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Execute"],
+    "websiteURL": "https://github.com/dinubs/idea-check",
+    "defaultPrompt": [
+      "Verify the ideas in this project.",
+      "Run the CI idea verification profile.",
+      "Try to falsify our release-blocking ideas."
+    ]
+  }
+}

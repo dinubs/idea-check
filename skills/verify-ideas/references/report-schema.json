@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Idea Check verification report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "revision", "summary", "ideas"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile": { "enum": ["ci", "release", "weekly"] },
+    "revision": { "type": "string" },
+    "summary": { "type": "string", "minLength": 1 },
+    "ideas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "result", "summary", "evidence", "gaps"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "result": { "enum": ["supported", "contradicted", "inconclusive", "blocked", "not_applicable"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "description", "direct"],
+              "properties": {
+                "kind": { "type": "string", "minLength": 1 },
+                "description": { "type": "string", "minLength": 1 },
+                "direct": { "type": "boolean" },
+                "command": { "type": "string" },
+                "exit_code": { "type": "integer" },
+                "location": { "type": "string" },
+                "artifact": { "type": "string" }
+              }
+            }
+          },
+          "gaps": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

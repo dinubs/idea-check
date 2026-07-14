@@ -1,0 +1,19 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: python -m unittest discover -s tests -v
+      - run: python -m json.tool .codex-plugin/plugin.json >/dev/null
+      - run: python -m json.tool skills/verify-ideas/references/report-schema.json >/dev/null
+      - run: bin/idea-check --help
